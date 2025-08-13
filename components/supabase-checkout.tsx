@@ -505,12 +505,23 @@ export default function SupabaseCheckout({ isOpen, onClose, cart, total, onCartR
                     Scan QR Code to Pay
                   </h3>
                   <div className="bg-white/5 rounded-lg p-6 border border-white/10 text-center">
-                    <div className="w-48 h-48 mx-auto bg-white rounded-lg p-4 mb-4">
-                      {/* Placeholder QR Code - Replace with actual QR code */}
-                      <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
-                        <span className="text-gray-500 text-sm">QR Code Here</span>
-                      </div>
-                    </div>
+                                         <div className="w-48 h-48 mx-auto bg-white rounded-lg p-4 mb-4">
+                       {/* Replace this with your actual payment QR code */}
+                       <img 
+                         src="/payment/paymentqr.svg" 
+                         alt="Payment QR Code"
+                         className="w-full h-full object-contain"
+                         onError={(e) => {
+                           // Fallback if QR code image fails to load
+                           const target = e.target as HTMLImageElement;
+                           target.style.display = 'none';
+                           target.nextElementSibling?.classList.remove('hidden');
+                         }}
+                       />
+                       <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center hidden">
+                         <span className="text-gray-500 text-sm">QR Code Here</span>
+                       </div>
+                     </div>
                     <p className="text-gray-300 text-sm mb-2">Scan this QR code with your payment app</p>
                     <p className="text-[#F7DD0F] font-semibold">Amount: Rs {paymentAmount.toLocaleString()}</p>
                   </div>
