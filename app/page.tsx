@@ -26,60 +26,18 @@ import {
 import LazyAIChat from "@/components/lazy-ai-chat"
 import SEOOptimizer, { defaultStructuredData } from "@/components/seo-optimizer"
 import SupabaseCheckout from "@/components/supabase-checkout"
-import { allProducts, type Product } from "@/lib/products-data"
+import { getProducts, type Product } from "@/lib/products-data"
 import { useCart } from "@/contexts/cart-context"
+
 
 // Product type is now imported from lib/products-data
 
-// Products data imported from lib/products-data
-const products: Product[] = allProducts
 
-// Check for admin products in localStorage
-const getProducts = (): Product[] => {
-  if (typeof window !== 'undefined') {
-    try {
-      const adminProducts = localStorage.getItem('adminProducts')
-      const originalProductEdits = localStorage.getItem('originalProductEdits')
-      
-      let result = [...allProducts]
-      
-      // Apply original product edits if they exist
-      if (originalProductEdits) {
-        try {
-          const parsedEdits = JSON.parse(originalProductEdits)
-          // Replace original products with edited versions
-          result = result.map(product => {
-            const edit = parsedEdits.find((p: any) => p.id === product.id)
-            return edit || product
-          })
-        } catch (e) {
-          console.error('Error parsing original product edits:', e)
-        }
-      }
-      
-      // Add admin-added products if they exist
-      if (adminProducts) {
-        try {
-          const parsed = JSON.parse(adminProducts)
-          // Only return admin-added products (those with IDs higher than original products)
-          const adminAddedProducts = parsed.filter((p: any) => p.id > 5) // Original products have IDs 1-5
-          result = [...result, ...adminAddedProducts]
-        } catch (e) {
-          console.error('Error parsing admin products:', e)
-        }
-      }
-      
-      return result
-    } catch (error) {
-      console.error('Error accessing localStorage:', error)
-    }
-  }
-  return allProducts
-}
 
 export default function DopeTechEcommerce() {
   const router = useRouter()
   const [scrollY, setScrollY] = useState(0)
+  const [products, setProducts] = useState<Product[]>([])
   const { 
     cart, 
     addToCart, 
@@ -92,6 +50,11 @@ export default function DopeTechEcommerce() {
     checkoutModalOpen,
     setCheckoutModalOpen
   } = useCart()
+
+  // Get products from Supabase (no local storage fallback)
+  const getLocalProducts = (): Product[] => {
+    return products
+  }
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [viewMode, setViewMode] = useState("grid")
   const [searchQuery, setSearchQuery] = useState("")
@@ -99,7 +62,7 @@ export default function DopeTechEcommerce() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchModalReady, setSearchModalReady] = useState(false)
-  const [currentProducts, setCurrentProducts] = useState<Product[]>(allProducts)
+  const [currentProducts, setCurrentProducts] = useState<Product[]>([])
   const [showBackToCategories, setShowBackToCategories] = useState(false)
   const [isCategoryInView, setIsCategoryInView] = useState(true)
   const [categoryIconIndex, setCategoryIconIndex] = useState(0)
@@ -127,16 +90,32 @@ export default function DopeTechEcommerce() {
       // Use passive listener for better scroll perf
       window.addEventListener("scroll", handleScroll, { passive: true } as any)
       
-      // Set loading to false immediately for better UX
-      setIsLoading(false)
-      
       return () => {
         window.removeEventListener("scroll", handleScroll as any)
       }
-    } else {
-      // For SSR, set loading to false immediately
-      setIsLoading(false)
     }
+  }, [])
+
+  // Fetch products from Supabase
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        console.log('🔄 Fetching products from Supabase...')
+        
+        const supabaseProducts = await getProducts()
+        console.log('📦 Products fetched:', supabaseProducts.length)
+        console.log('🎯 First product:', supabaseProducts[0])
+        
+        setProducts(supabaseProducts || [])
+        setIsLoading(false)
+      } catch (error) {
+        console.error('❌ Error fetching products:', error)
+        setProducts([])
+        setIsLoading(false)
+      }
+    }
+
+    fetchProducts()
   }, [])
 
   // Dynamically measure header height and apply as hero top padding to avoid clipping
@@ -173,27 +152,21 @@ export default function DopeTechEcommerce() {
     return () => clearTimeout(t)
   }, [searchDraft])
 
-  // Update products when localStorage changes
+  // Update products when products state changes
   useEffect(() => {
-    const updatedProducts = getProducts()
-    setCurrentProducts(updatedProducts)
-    
-    // Debug: Check what's in localStorage
-    if (typeof window !== 'undefined') {
-      try {
-        console.log('Current localStorage adminProducts:', localStorage.getItem('adminProducts'))
-      } catch (error) {
-        console.error('Error accessing localStorage:', error)
-      }
-    }
-  }, [])
+    setCurrentProducts(products)
+  }, [products])
 
   // Auto-shuffle poster products
   useEffect(() => {
+    if (products.length === 0) return
+    
     const interval = setInterval(() => {
       const container = document.querySelector('.flex.overflow-x-auto.scrollbar-hide') as HTMLElement;
       if (container && !container.classList.contains('user-interacting')) {
-        const productsToShow = products.filter((p: any) => !p.hiddenOnHome).slice(0, 6);
+        const productsToShow = products.filter((p: any) => !p.hidden_on_home).slice(0, 6);
+        if (productsToShow.length === 0) return
+        
         const currentIndex = posterIndex;
         const nextIndex = (currentIndex + 1) % productsToShow.length;
         
@@ -229,32 +202,15 @@ export default function DopeTechEcommerce() {
 
   // Listen for localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
-      const updatedProducts = getProducts()
-      setCurrentProducts(updatedProducts)
-    }
-
-    const handleCategoriesChange = () => {
-      const updatedCategories = getCategories()
-      setCategories(updatedCategories)
-    }
-
     const handleGifChange = () => {
       // Force re-render to update GIF
       setAnimationKey(prev => prev + 1)
     }
 
-    window.addEventListener('storage', handleStorageChange)
-    
-    // Also listen for custom events (for same-tab updates)
-    window.addEventListener('adminProductsUpdated', handleStorageChange)
-    window.addEventListener('adminCategoriesUpdated', handleCategoriesChange)
+    // Listen for custom events (for same-tab updates)
     window.addEventListener('gifUpdated', handleGifChange)
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('adminProductsUpdated', handleStorageChange)
-      window.removeEventListener('adminCategoriesUpdated', handleCategoriesChange)
       window.removeEventListener('gifUpdated', handleGifChange)
     }
   }, [])
@@ -880,6 +836,24 @@ export default function DopeTechEcommerce() {
                     <span className="font-medium text-base sm:text-lg">{category.name}</span>
                   </button>
                 ))}
+                
+                {/* Admin Link */}
+                <button
+                  onClick={() => {
+                    router.push('/admin')
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="w-full flex items-center space-x-3 sm:space-x-4 px-4 sm:px-5 py-3 sm:py-4 rounded-xl transition-all duration-200 touch-target mobile-menu-item text-white bg-red-600/20 backdrop-blur-md border border-red-500/30 hover:bg-red-600/30 hover:border-red-500/50 shadow-lg"
+                  style={{ minHeight: '56px' }}
+                >
+                  <div className="flex-shrink-0 text-red-400">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <span className="font-medium text-base sm:text-lg">Admin Panel</span>
+                </button>
               </div>
             </div>
           )}
@@ -1058,7 +1032,7 @@ export default function DopeTechEcommerce() {
                         style={{ scrollSnapAlign: 'start' }}
                       >
                         <img
-                          src={product.image}
+                          src={product.image_url}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
@@ -1082,7 +1056,7 @@ export default function DopeTechEcommerce() {
                   
                   {/* Navigation Dots - Mobile Optimized */}
                   <div className="absolute bottom-2 sm:bottom-3 md:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1.5 sm:space-x-2">
-                    {products.filter((p: any) => !p.hiddenOnHome).slice(0, 6).map((_, index) => (
+                    {products.filter((p: any) => !p.hidden_on_home).slice(0, 6).map((_, index) => (
                       <button
                         key={index}
                         onClick={() => {
@@ -1181,11 +1155,11 @@ export default function DopeTechEcommerce() {
                   {/* Continuous Marquee Row */}
                   <div className="flex animate-marquee space-x-4 sm:space-x-6 md:space-x-8 min-w-max">
                     {/* First set of products */}
-                    {products.filter((p: any) => !p.hiddenOnHome).map((product, index) => (
+                    {products.filter((p: any) => !p.hidden_on_home).map((product, index) => (
                       <div key={`marquee-first-${product.id}`} className="group relative flex-shrink-0">
                         <div className="relative overflow-hidden rounded-2xl w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 bg-gradient-to-br from-white/5 to-white/10 border border-white/10 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
                           <img
-                            src={product.image}
+                            src={product.image_url}
                             alt={product.name}
                             className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110 group-hover:rotate-1"
                           />
@@ -1209,11 +1183,11 @@ export default function DopeTechEcommerce() {
                     ))}
                     
                     {/* Duplicate set for seamless loop */}
-                    {products.filter((p: any) => !p.hiddenOnHome).map((product, index) => (
+                    {products.filter((p: any) => !p.hidden_on_home).map((product, index) => (
                       <div key={`marquee-second-${product.id}`} className="group relative flex-shrink-0">
                         <div className="relative overflow-hidden rounded-2xl w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 bg-gradient-to-br from-white/5 to-white/10 border border-white/10 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
                           <img
-                            src={product.image}
+                            src={product.image_url}
                             alt={product.name}
                             className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110 group-hover:rotate-1"
                           />
@@ -1260,7 +1234,7 @@ export default function DopeTechEcommerce() {
               
               {/* 2x2 Grid Layout - 2x Bigger than Marquee */}
               <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-8 max-w-5xl mx-auto">
-                {products.filter((p: any) => !p.hiddenOnHome).slice(0, 4).map((product, index) => (
+                {products.filter((p: any) => !p.hidden_on_home).slice(0, 4).map((product, index) => (
                   <div key={`weekly-pick-${product.id}`} className="group relative animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
                     <div 
                       className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/5 to-white/10 border-0 sm:border sm:border-white/10 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-rotate-1 cursor-pointer"
@@ -1269,7 +1243,7 @@ export default function DopeTechEcommerce() {
                       {/* 2x Bigger than marquee: w-80 h-80 sm:w-96 sm:h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] */}
                       <div className="w-80 h-80 sm:w-96 sm:h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] mx-auto">
                         <img
-                          src={product.image}
+                          src={product.image_url}
                           alt={product.name}
                           className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110"
                         />
@@ -1399,7 +1373,7 @@ export default function DopeTechEcommerce() {
                   {/* Product Image with Enhanced Hover Effects */}
                   <div className="relative image-container overflow-hidden rounded-2xl aspect-square">
                       <img
-                      src={product.image}
+                      src={product.image_url}
                       alt={product.name}
                         className="w-full h-full object-cover object-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-1"
                         loading="lazy"
@@ -1410,7 +1384,7 @@ export default function DopeTechEcommerce() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     {/* Mobile In-Stock badge at top-right */}
-                    {product.inStock && (
+                    {product.in_stock && (
                       <div className="absolute top-2 right-2 sm:hidden px-2 py-1 rounded-full text-[10px] font-medium bg-green-500/20 backdrop-blur-md text-green-100 border border-green-500/30 shadow-lg">
                         In Stock
                       </div>
@@ -1422,8 +1396,8 @@ export default function DopeTechEcommerce() {
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col leading-tight">
                           <span className="text-[#F7DD0F] font-bold text-xs sm:text-sm">Rs {product.price}</span>
-                          {product.originalPrice > product.price && (
-                            <span className="text-[10px] sm:text-xs text-gray-300 line-through">Rs {product.originalPrice}</span>
+                          {product.original_price > product.price && (
+                            <span className="text-[10px] sm:text-xs text-gray-300 line-through">Rs {product.original_price}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
@@ -1432,10 +1406,10 @@ export default function DopeTechEcommerce() {
                               e.stopPropagation()
                               addToCart(product)
                             }}
-                            disabled={!product.inStock}
+                            disabled={!product.in_stock}
                             aria-label="Add to cart"
                             className={`inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow transition-transform active:scale-95 cursor-pointer z-10 relative ${
-                              product.inStock
+                              product.in_stock
                                 ? "bg-[#F7DD0F] text-black hover:bg-[#F7DD0F]/90"
                                 : "bg-gray-500/40 text-gray-300 cursor-not-allowed"
                             }`}
@@ -1447,7 +1421,7 @@ export default function DopeTechEcommerce() {
                     </div>
 
                     {/* Stock Status Badge */}
-                    {!product.inStock && (
+                    {!product.in_stock && (
                       <div className="absolute top-3 right-3 bg-red-500/20 backdrop-blur-md text-red-100 border border-red-500/30 px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
                         Out of Stock
                       </div>

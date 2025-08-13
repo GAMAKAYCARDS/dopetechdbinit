@@ -4,24 +4,9 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Plus, Heart, Star, Truck, Shield, RotateCcw, ShoppingBag, X, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { allProducts } from "@/lib/products-data"
 import { useCart } from "@/contexts/cart-context"
-import GoogleFormsCheckout from "@/components/google-forms-checkout"
-
-interface Product {
-  id: number
-  name: string
-  price: number
-  originalPrice: number
-  image: string
-  category: string
-  rating: number
-  reviews: number
-  description: string
-  features: string[]
-  inStock: boolean
-  discount: number
-}
+import SupabaseCheckout from "@/components/supabase-checkout"
+import { type Product } from "@/lib/products-data"
 
 interface ProductPageClientProps {
   product: Product
@@ -116,7 +101,7 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
             
             {/* Thumbnail Images */}
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-3 max-w-md mx-auto xl:mx-0">
-              {[product.image, product.image, product.image, product.image, product.image, product.image].map((image, index) => (
+              {[product.image_url, product.image_url, product.image_url, product.image_url, product.image_url, product.image_url].map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
@@ -152,10 +137,10 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
                 <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#F7DD0F]">
                   Rs {product.price.toLocaleString()}
                 </span>
-                {product.originalPrice > product.price && (
+                {product.original_price > product.price && (
                   <div className="flex items-center gap-1">
                     <span className="text-sm sm:text-base text-gray-400 line-through">
-                      Rs {product.originalPrice.toLocaleString()}
+                      Rs {product.original_price.toLocaleString()}
                     </span>
                   </div>
                 )}
@@ -271,7 +256,7 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
                >
                  <div className="aspect-square overflow-hidden">
                    <img
-                     src={relatedProduct.image}
+                     src={relatedProduct.image_url}
                      alt={relatedProduct.name}
                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                      loading="lazy"
@@ -389,14 +374,14 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
         </div>
       )}
 
-      {/* Google Forms Checkout Modal */}
-      <GoogleFormsCheckout
+      {/* Supabase Checkout Modal */}
+      <SupabaseCheckout
         isOpen={checkoutModalOpen}
         onClose={() => setCheckoutModalOpen(false)}
         cart={cart}
         total={getCartTotal()}
         onCartReset={() => {
-          // Cart will be cleared by the GoogleFormsCheckout component
+          // Cart will be cleared by the SupabaseCheckout component
         }}
       />
     </div>

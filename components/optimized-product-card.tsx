@@ -9,14 +9,14 @@ interface Product {
   id: number
   name: string
   price: number
-  originalPrice: number
-  image: string
+  original_price: number
+  image_url: string
   category: string
   rating: number
   reviews: number
   description: string
   features: string[]
-  inStock: boolean
+  in_stock: boolean
   discount: number
 }
 
@@ -67,9 +67,9 @@ export default function OptimizedProductCard({
     if (isInView && imageRef.current) {
       const img = new Image()
       img.onload = () => setImageLoaded(true)
-      img.src = product.image
+      img.src = product.image_url
     }
-  }, [isInView, product.image])
+      }, [isInView, product.image_url])
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -128,7 +128,7 @@ export default function OptimizedProductCard({
         {isInView && (
           <img
             ref={imageRef}
-            src={product.image}
+            src={product.image_url}
             alt={product.name}
             className={`w-full h-full object-cover transition-all duration-500 ${
               imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
@@ -171,18 +171,18 @@ export default function OptimizedProductCard({
               <span className="text-lg font-bold text-[#F7DD0F]">
                 Rs {product.price.toLocaleString()}
               </span>
-              {product.originalPrice > product.price && (
+              {product.original_price > product.price && (
                 <span className="text-xs sm:text-sm text-gray-500 line-through">
-                  Rs {product.originalPrice.toLocaleString()}
+                  Rs {product.original_price.toLocaleString()}
                 </span>
               )}
             </div>
-            <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${
-              product.inStock 
+            <div             className={`px-2 py-1 rounded-full text-[10px] font-medium ${
+              product.in_stock 
                 ? "bg-green-500/20 text-green-400 border border-green-500/30" 
                 : "bg-red-500/20 text-red-400 border border-red-500/30"
             }`}>
-              {product.inStock ? "In Stock" : "Out of Stock"}
+              {product.in_stock ? "In Stock" : "Out of Stock"}
             </div>
           </div>
           {/* Mobile discount removed as requested */}

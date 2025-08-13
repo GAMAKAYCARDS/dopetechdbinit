@@ -106,7 +106,7 @@ export default function RootLayout({
         
         {/* Preload critical resources */}
         <link rel="preload" href="/logo/dopelogo.svg" as="image" type="image/svg+xml" />
-        <link rel="preload" href="/products/keyboard.png" as="image" type="image/png" />
+
         
         {/* Meta tags for performance */}
         <meta name="theme-color" content="#F7DD0F" />

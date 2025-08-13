@@ -8,14 +8,14 @@ interface Product {
   id: number
   name: string
   price: number
-  originalPrice: number
-  image: string
+  original_price: number
+  image_url: string
   category: string
   rating: number
   reviews: number
   description: string
   features: string[]
-  inStock: boolean
+  in_stock: boolean
   discount: number
 }
 
