@@ -1,37 +1,10 @@
 [build]
   command = "pnpm build"
-  publish = "out"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18.20.0"
   NPM_FLAGS = "--legacy-peer-deps"
-
-# Specific redirects for admin page
-[[redirects]]
-  from = "/doptechadmin"
-  to = "/doptechadmin/index.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/doptechadmin/"
-  to = "/doptechadmin/index.html"
-  status = 200
-  force = true
-
-# Product page redirects
-[[redirects]]
-  from = "/product/*"
-  to = "/product/:splat/index.html"
-  status = 200
-  force = true
-
-# Catch-all for other routes (SPA routing)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
 
 # Headers for better performance
 [[headers]]
