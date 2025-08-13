@@ -96,10 +96,7 @@ const nextConfig = {
     
     return config;
   },
-  // Ensure proper static generation
-  async generateStaticParams() {
-    return [];
-  },
+
 }
 
 export default nextConfig
