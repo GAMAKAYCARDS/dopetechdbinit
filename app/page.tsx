@@ -25,7 +25,7 @@ import {
 // Removed CursorTracker (opt-in effect)
 import LazyAIChat from "@/components/lazy-ai-chat"
 import SEOOptimizer, { defaultStructuredData } from "@/components/seo-optimizer"
-import GoogleFormsCheckout from "@/components/google-forms-checkout"
+import SupabaseCheckout from "@/components/supabase-checkout"
 import { allProducts, type Product } from "@/lib/products-data"
 import { useCart } from "@/contexts/cart-context"
 
@@ -1673,7 +1673,7 @@ export default function DopeTechEcommerce() {
       )}
 
       {/* Checkout Modal */}
-      <GoogleFormsCheckout
+      <SupabaseCheckout
         isOpen={checkoutModalOpen}
         onClose={() => setCheckoutModalOpen(false)}
         cart={cart}
