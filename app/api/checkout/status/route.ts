@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Required for static export
-export const dynamic = 'force-static'
-export const revalidate = false
-
 // Google Sheets API configuration
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID || 'your-sheet-id-here'
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
