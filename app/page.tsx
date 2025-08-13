@@ -127,15 +127,15 @@ export default function DopeTechEcommerce() {
       // Use passive listener for better scroll perf
       window.addEventListener("scroll", handleScroll, { passive: true } as any)
       
-      // Simulate loading completion
-      const timer = setTimeout(() => {
-        setIsLoading(false)
-      }, 1000)
+      // Set loading to false immediately for better UX
+      setIsLoading(false)
       
       return () => {
         window.removeEventListener("scroll", handleScroll as any)
-        clearTimeout(timer)
       }
+    } else {
+      // For SSR, set loading to false immediately
+      setIsLoading(false)
     }
   }, [])
 
